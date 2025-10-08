@@ -8,7 +8,7 @@
 #include <string>
 #include <array>
 #include <tuple>
-//#define NDEBUG
+#define NDEBUG
 
 template<typename T, size_t N>
 using Matrix = std::array<std::array<T, N>, N>;
@@ -72,3 +72,4 @@ auto readMatrixFromBinaryFile(std::string_view filename) {
 //}
 
 #endif // MATRIX_IO_H
+
