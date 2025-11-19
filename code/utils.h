@@ -1,12 +1,11 @@
 #include <algorithm>
-#include <iostream>
 #include <random>
-#include <iomanip>
+#include <print>
 #include <chrono>
 
 // Adjustable parameters
-constexpr size_t size = 2880;
-constexpr size_t block_sz = 192;  // Change this to suit your device
+constexpr size_t size = 10000;
+constexpr size_t block_sz = 280;  // Change this to suit your device
 
 using Matrix_t = float[size][size];
 

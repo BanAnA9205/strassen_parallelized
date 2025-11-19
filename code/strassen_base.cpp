@@ -54,9 +54,7 @@ void improved_matmul(const size_t n, const float* A, const float* B, float* C) {
         for (size_t chunk_j = 0; chunk_j < n; chunk_j += block_sz) {
             size_t max_j = std::min(chunk_j + block_sz, n);
 
-            for (size_t i = 0; i < block_sz; ++i) {
-                 std::fill(std::begin(C_loc[i]), std::end(C_loc[i]), 0.0f);
-            }
+            std::fill_n(&C_loc[0][0], block_sz * block_sz, 0.0f);
 
             for (size_t chunk_k = 0; chunk_k < n; chunk_k += block_sz) {
                 size_t max_k = std::min(chunk_k + block_sz, n);
@@ -100,26 +98,18 @@ void strassen_matmul(const size_t n, const float *A, const float *B, float *C) {
         // n odd, strip the last row and column
         const size_t n_minus_1 = n - 1;
 
-        float *A_row_last = new float[n_minus_1];
-        float *B_col_last = new float[n_minus_1];
-        
-        for (size_t i = 0; i < n_minus_1; ++i) {
-            A_row_last[i] = A[idx(n_minus_1, i, n)];
-            B_col_last[i] = B[idx(i, n_minus_1, n)];
-        }
-
         // manually handle the last row and column
         // row
         for (size_t j = 0; j < n; ++j) {
             for (size_t k = 0; k < n; ++k) {
-                C[idx(n_minus_1, j, n)] += A_row_last[k] * B[idx(k, j, n)];
+                C[idx(n_minus_1, j, n)] += A[idx(n_minus_1, k, n)] * B[idx(k, j, n)];
             }
         }
 
         // column
         for (size_t i = 0; i < n_minus_1; ++i) {
             for (size_t k = 0; k < n; ++k) {
-                C[idx(i, n_minus_1, n)] += A[idx(i, k, n)] * B_col_last[k];
+                C[idx(i, n_minus_1, n)] += A[idx(i, k, n)] * B[idx(k, n_minus_1, n)];
             }
         }
     }
@@ -184,10 +174,10 @@ void strassen_matmul(const size_t n, const float *A, const float *B, float *C) {
     float *U5 = T1, *U6 = T2, *U7 = T3;
 
     add(        half_n,     P1,     P2,     U1);        // U1 = P1 + P2
-    add(        half_n,     P1,     P6,     U2);        // U2 = P3 + P4
+    add(        half_n,     P1,     P6,     U2);        // U2 = P1 + P6
     add(        half_n,     U2,     P7,     U3);        // U3 = U2 + P7
     add(        half_n,     U2,     P5,     U4);        // U4 = U2 + P5
-    add(        half_n,     U4,     P3,     U5);        // U5 = P3 + P5
+    add(        half_n,     U4,     P3,     U5);        // U5 = U4 + P3
     subtract(   half_n,     U3,     P4,     U6);        // U6 = U3 - P4
     add(        half_n,     U3,     P5,     U7);        // U7 = U3 + P5
 

@@ -1,19 +1,11 @@
-<<<<<<< HEAD
-#include <algorithm>
-#include <iostream>
-#include <random>
-#include <chrono>
-
-// Adjustable parameters
-constexpr size_t size = 2880;
-constexpr size_t block_sz = 160;  // Change this to suit your device
-
-using Matrix_t = float[size][size];
-=======
 #include "utils.h"
 
->>>>>>> ed4bd35 ((temp) added strassen)
 Matrix_t A_in{}, B_in{}, C_naive{}, C_improved{};
+
+// Compile with:
+// g++ code/naive_plus_improved.cpp -Ofast -march=native -o main -lstdc++exp -std=c++23 -Wall -Weffc++ -Wextra -Wconversion -Wsign-conversion
+// -lstdc++exp -std=c++23: link the experimental standard library for std::println
+// -Wall -Weffc++ -Wextra -Wconversion -Wsign-conversion: enable more warnings to help write better code (optional)
 
 // compile with this long ass command
 // g++ -O3 -fopenmp -march=native -ffast-math -funroll-loops -std=c++23 naive_plus_improved.cpp -o npi_matmul
@@ -40,11 +32,7 @@ void naive_matmul(const Matrix_t& A, const Matrix_t& B, Matrix_t& C) {
 // Note: remember to compile with --fopenmp flag
 void improved_matmul(const Matrix_t& A, const Matrix_t& B, Matrix_t& C) {
     // local accumulator
-<<<<<<< HEAD
-    float C_loc[block_sz][block_sz];
-=======
     alignas(64) float C_loc[block_sz][block_sz];
->>>>>>> ed4bd35 ((temp) added strassen)
 
     // super advanced typa shit (it's just blocked matmul)
     for (size_t chunk_iA = 0; chunk_iA < size; chunk_iA += block_sz) {
@@ -58,32 +46,19 @@ void improved_matmul(const Matrix_t& A, const Matrix_t& B, Matrix_t& C) {
 
             for (size_t chunk_jA = 0; chunk_jA < size; chunk_jA += block_sz) {
                 size_t max_jA = std::min(chunk_jA + block_sz, size);
-<<<<<<< HEAD
-
-                for (size_t iA = chunk_iA; iA < max_iA; iA++)
-                    for (size_t jA = chunk_jA; jA < max_jA; jA++) {
-                        float a = A[iA][jA];
-
-                        #pragma omp simd
-=======
 
                 for (size_t iA = chunk_iA; iA < max_iA; iA++)
                     for (size_t jA = chunk_jA; jA < max_jA; jA++) {
                         float a = A[iA][jA];
 
 #pragma omp simd
->>>>>>> ed4bd35 ((temp) added strassen)
                         for (size_t jB = chunk_iB; jB < max_iB; jB++)
                             C_loc[iA - chunk_iA][jB - chunk_iB] += a * B[jA][jB];
                     }
             }
 
             for (size_t iA = chunk_iA; iA < max_iA; iA++)
-<<<<<<< HEAD
-                #pragma omp simd
-=======
 #pragma omp simd
->>>>>>> ed4bd35 ((temp) added strassen)
                 for (size_t jB = chunk_iB; jB < max_iB; jB++)
                     C[iA][jB] += C_loc[iA - chunk_iA][jB - chunk_iB];
         }
@@ -96,24 +71,8 @@ void improved_matmul(const Matrix_t& A, const Matrix_t& B, Matrix_t& C) {
 ///// Grok-chan DOES NOT sponsored this testing code UwU /////
 //////////////////////////////////////////////////////////////
 
-<<<<<<< HEAD
-// Check if two matrices match (absolute tolerance; add relative if needed)
-bool matrices_equal(const Matrix_t& C1, const Matrix_t& C2, float tol = 1e-4f) {
-	// size_t size = std::size(C1);
-    for (size_t i = 0; i < size; ++i) {
-        for (size_t j = 0; j < size; ++j) {
-            if (std::abs(C1[i][j] - C2[i][j]) > tol) {
-                return false;
-            }
-        }
-    }
-    return true;
-}
-
-=======
->>>>>>> ed4bd35 ((temp) added strassen)
 int main() {
-    std::cout << "Matrix size: " << size << "x" << size << "\n";
+    std::println("Matrix size: {}x{}", size, size);
 
     // Allocate and fill matrices (inline; uniform [-1,1] random)
     std::random_device rd;
@@ -131,21 +90,19 @@ int main() {
 	naive_matmul(A_in, B_in, C_naive);
 	auto end_naive = std::chrono::high_resolution_clock::now();
 	std::chrono::duration<double, std::milli> duration_naive = end_naive - start_naive;
-	std::cout << "Naive: " << duration_naive.count() << " ms\n";
+    std::println("Naive: {}", duration_naive);
 
     // Time improved
 	auto start_improved = std::chrono::high_resolution_clock::now();
 	improved_matmul(A_in, B_in, C_improved);
 	auto end_improved = std::chrono::high_resolution_clock::now();
 	std::chrono::duration<double, std::milli> duration_improved = end_improved - start_improved;
-	std::cout << "Improved (bs=" << block_sz << "): " << duration_improved.count() << " ms\n";
-
-    std::cout << std::setprecision(2);
-    std::cout << "Speedup: " << duration_naive.count() / duration_improved.count() << "x\n";
+    std::println("Improved (bs={}): {}", block_sz, duration_improved);
+    std::println("Speedup (bs={}): {:.2f}x", block_sz, duration_naive.count() / duration_improved.count());
 
     // Check correctness
     if (!matrices_equal(C_naive, C_improved)) {
-        std::cout << "WARNING: Improved (bs=" << block_sz << ") does not match naive!" << std::endl;
+        std::println("WARNING: Improved (bs={}) does not match naive!", block_sz);
     }
 
     return 0;
