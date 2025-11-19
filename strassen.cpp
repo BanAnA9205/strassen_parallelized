@@ -1,12 +1,12 @@
 // Compile with:
-// g++ code/naive_plus_improved.cpp -Ofast -march=native -o main -lstdc++exp -std=c++23 -Wall -Weffc++ -Wextra -Wconversion -Wsign-conversion
+// g++ strassen.cpp -Ofast -march=native -o main -lstdc++exp -std=c++23 -Wall -Weffc++ -Wextra -Wconversion -Wsign-conversion
 // -lstdc++exp -std=c++23: link the experimental standard library for std::println
 // -Wall -Weffc++ -Wextra -Wconversion -Wsign-conversion: enable more warnings to help write better code (optional)
 
 #include <algorithm>
 
 constexpr size_t size = 10000;
-constexpr size_t threshold = 128;
+constexpr size_t threshold = 1000;
 constexpr size_t block_sz = 280;
 
 /**
@@ -97,6 +97,26 @@ void strassen_matmul(const MatrixView A, const MatrixView B, MatrixView C, size_
         return;
     }
 
+    if (n % 2 != 0) {
+        // n odd, strip the last row and column
+        size_t n_minus_1 = n - 1;
+
+        // manually handle the last row and column
+        // row
+        for (size_t j = 0; j < n; ++j) {
+            for (size_t k = 0; k < n; ++k) {
+                C(n_minus_1, j) += A(n_minus_1, k) * B(k, j);
+            }
+        }
+
+        // column
+        for (size_t i = 0; i < n_minus_1; ++i) {
+            for (size_t k = 0; k < n; ++k) {
+                C(i, n_minus_1) += A(i, k) * B(k, n_minus_1);
+            }
+        }
+    }
+
     size_t half_n = n / 2;
     auto A11 = A.subview(0, 0);
     auto A12 = A.subview(0, half_n);
@@ -168,7 +188,7 @@ float B_in[size * size];
 float C_out[size * size];
 
 // Compile with:
-// g++ code/naive_plus_improved.cpp -Ofast -march=native -o main -lstdc++exp -std=c++23 -Wall -Weffc++ -Wextra -Wconversion -Wsign-conversion
+// g++ strassen.cpp -Ofast -march=native -o main -lstdc++exp -std=c++23 -Wall -Weffc++ -Wextra -Wconversion -Wsign-conversion
 // -lstdc++exp -std=c++23: link the experimental standard library for std::println
 // -Wall -Weffc++ -Wextra -Wconversion -Wsign-conversion: enable more warnings to help write better code (optional)
 
