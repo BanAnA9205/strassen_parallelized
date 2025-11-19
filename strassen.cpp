@@ -126,55 +126,37 @@ void strassen_matmul(const MatrixView A, const MatrixView B, MatrixView C, size_
     auto B12 = B.subview(0, half_n);
     auto B21 = B.subview(half_n, 0);
     auto B22 = B.subview(half_n, half_n);
-    auto U1 = C.subview(0, 0);
-    auto U5 = C.subview(0, half_n);
-    auto U6 = C.subview(half_n, 0);
-    auto U7 = C.subview(half_n, half_n);
+    auto C11 = C.subview(0, 0);
+    auto C12 = C.subview(0, half_n);
+    auto C21 = C.subview(half_n, 0);
+    auto C22 = C.subview(half_n, half_n);
 
-    float* arr = new float[8 * half_n * half_n];
-    MatrixView S1{arr + 0 * half_n * half_n, half_n};
-    MatrixView S2{arr + 1 * half_n * half_n, half_n};
-    MatrixView T1{arr + 2 * half_n * half_n, half_n};
-    MatrixView T2{arr + 3 * half_n * half_n, half_n};
-    MatrixView P1{arr + 4 * half_n * half_n, half_n};
-    MatrixView P5{arr + 5 * half_n * half_n, half_n};
-    MatrixView U2{arr + 6 * half_n * half_n, half_n};
-    MatrixView U3{arr + 7 * half_n * half_n, half_n};
+    float* arr = new float[2 * half_n * half_n];
+    MatrixView X{arr + 0 * half_n * half_n, half_n};
+    MatrixView Y{arr + 1 * half_n * half_n, half_n};
 
-    add(A21, A22, S1, half_n);  // S1 = A21 + A22
-    sub(S1, A11, S2, half_n);   // S2 = S1 - A11
-    sub(B12, B11, T1, half_n);  // T1 = B12 - B11
-    sub(B22, T1, T2, half_n);   // T2 = B22 - T1
-    strassen_matmul(A11, B11, P1, half_n);  // P1 = A11 * B11
-    strassen_matmul(S1, T1, P5, half_n);    // P5 = S1 * T1
-
-    // U1 = P1 + (A12 * B21)
-    strassen_matmul(A12, B21, U1, half_n);
-    add(U1, P1, U1, half_n);
-
-    // U2 = P1 + (S2 * T2)
-    strassen_matmul(S2, T2, U2, half_n);
-    add(U2, P1, U2, half_n);
-
-    // U3 = U2 + (A11 - A21) * (B22 - B12)
-    sub(A11, A21, S1, half_n); // reuse S1
-    sub(B22, B12, T1, half_n); // reuse T1
-    strassen_matmul(S1, T1, U3, half_n);
-    add(U3, U2, U3, half_n);
-
-    // U5 = U2 + P5 + (A12 - S2) * B22
-    sub(A12, S2, S1, half_n); // reuse S1
-    strassen_matmul(S1, B22, U5, half_n);
-    add(U5, U2, U5, half_n);
-    add(U5, P5, U5, half_n);
-
-    // U6 = U3 - A22 * (T2 - B21)
-    sub(T2, B21, T1, half_n); // reuse T1
-    strassen_matmul(A22, T1, U6, half_n);
-    sub(U3, U6, U6, half_n);
-
-    // U7 = U3 + P5
-    add(U3, P5, U7, half_n);
+    sub(A11, A21, X, half_n);               // S3 = A11 - A21
+    sub(B22, B12, Y, half_n);               // T3 = B22 - B12
+    strassen_matmul(X, Y, C21, half_n);     // P7 = S3 * T3
+    add(A21, A22, X, half_n);               // S1 = A21 + A22
+    sub(B12, B11, Y, half_n);               // T1 = B12 - B11
+    strassen_matmul(X, Y, C22, half_n);     // P5 = S1 * T1
+    sub(X, A11, X, half_n);                 // S2 = S1 - A11
+    sub(B22, Y, Y, half_n);                 // T2 = B22 - T1
+    strassen_matmul(X, Y, C12, half_n);     // P6 = S2 * T2
+    sub(A12, X, X, half_n);                 // S4 = A12 - S2
+    strassen_matmul(X, B22, C11, half_n);   // P3 = S4 * B22
+    strassen_matmul(A11, B11, X, half_n);   // P1 = A11 * B11
+    add(X, C12, C12, half_n);               // U2 = P1 + P6
+    add(C12, C21, C21, half_n);             // U3 = U2 + P7
+    add(C12, C22, C12, half_n);             // U4 = U2 + P5
+    add(C21, C22, C22, half_n);             // U7 = U3 + P5
+    add(C12, C11, C12, half_n);             // U5 = U4 + P3
+    sub(Y, B21, Y, half_n);                 // T4 = T2 - B21
+    strassen_matmul(A22, Y, C11, half_n);   // P4 = A22 * T4
+    sub(C21, C11, C21, half_n);             // U6 = U3 - P4
+    strassen_matmul(A12, B21, C11, half_n); // P2 = A12 * B21
+    add(X, C11, C11, half_n);               // U1 = P1 + P2
 
     delete[] arr;
 }
