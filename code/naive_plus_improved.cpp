@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 #include <algorithm>
 #include <iostream>
 #include <random>
@@ -8,6 +9,10 @@ constexpr size_t size = 2880;
 constexpr size_t block_sz = 160;  // Change this to suit your device
 
 using Matrix_t = float[size][size];
+=======
+#include "utils.h"
+
+>>>>>>> ed4bd35 ((temp) added strassen)
 Matrix_t A_in{}, B_in{}, C_naive{}, C_improved{};
 
 // compile with this long ass command
@@ -35,7 +40,11 @@ void naive_matmul(const Matrix_t& A, const Matrix_t& B, Matrix_t& C) {
 // Note: remember to compile with --fopenmp flag
 void improved_matmul(const Matrix_t& A, const Matrix_t& B, Matrix_t& C) {
     // local accumulator
+<<<<<<< HEAD
     float C_loc[block_sz][block_sz];
+=======
+    alignas(64) float C_loc[block_sz][block_sz];
+>>>>>>> ed4bd35 ((temp) added strassen)
 
     // super advanced typa shit (it's just blocked matmul)
     for (size_t chunk_iA = 0; chunk_iA < size; chunk_iA += block_sz) {
@@ -49,19 +58,32 @@ void improved_matmul(const Matrix_t& A, const Matrix_t& B, Matrix_t& C) {
 
             for (size_t chunk_jA = 0; chunk_jA < size; chunk_jA += block_sz) {
                 size_t max_jA = std::min(chunk_jA + block_sz, size);
+<<<<<<< HEAD
 
                 for (size_t iA = chunk_iA; iA < max_iA; iA++)
                     for (size_t jA = chunk_jA; jA < max_jA; jA++) {
                         float a = A[iA][jA];
 
                         #pragma omp simd
+=======
+
+                for (size_t iA = chunk_iA; iA < max_iA; iA++)
+                    for (size_t jA = chunk_jA; jA < max_jA; jA++) {
+                        float a = A[iA][jA];
+
+#pragma omp simd
+>>>>>>> ed4bd35 ((temp) added strassen)
                         for (size_t jB = chunk_iB; jB < max_iB; jB++)
                             C_loc[iA - chunk_iA][jB - chunk_iB] += a * B[jA][jB];
                     }
             }
 
             for (size_t iA = chunk_iA; iA < max_iA; iA++)
+<<<<<<< HEAD
                 #pragma omp simd
+=======
+#pragma omp simd
+>>>>>>> ed4bd35 ((temp) added strassen)
                 for (size_t jB = chunk_iB; jB < max_iB; jB++)
                     C[iA][jB] += C_loc[iA - chunk_iA][jB - chunk_iB];
         }
@@ -74,6 +96,7 @@ void improved_matmul(const Matrix_t& A, const Matrix_t& B, Matrix_t& C) {
 ///// Grok-chan DOES NOT sponsored this testing code UwU /////
 //////////////////////////////////////////////////////////////
 
+<<<<<<< HEAD
 // Check if two matrices match (absolute tolerance; add relative if needed)
 bool matrices_equal(const Matrix_t& C1, const Matrix_t& C2, float tol = 1e-4f) {
 	// size_t size = std::size(C1);
@@ -87,6 +110,8 @@ bool matrices_equal(const Matrix_t& C1, const Matrix_t& C2, float tol = 1e-4f) {
     return true;
 }
 
+=======
+>>>>>>> ed4bd35 ((temp) added strassen)
 int main() {
     std::cout << "Matrix size: " << size << "x" << size << "\n";
 
