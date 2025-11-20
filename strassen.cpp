@@ -4,20 +4,21 @@
 // -Wall -Weffc++ -Wextra -Wconversion -Wsign-conversion: enable more warnings to help write better code (optional)
 
 #include <algorithm>
+#include <vector>
 
 constexpr size_t threshold = 300;
 constexpr size_t block_sz = 280;
-
 
 // utility struct to represent a matrix view
 // @param where: pointer to the first element of the view
 // @param dim: leading dimension (number of columns in the original matrix)
 struct MatrixView {
     float* where;
-    size_t dim;
+    size_t dim, rangeI, rangeJ;
 
     // access element (i,j) of the view
-    const float& operator()(size_t i, size_t j) const {
+    float operator()(size_t i, size_t j) const {
+        if (i >= rangeI || j >= rangeJ) return 0.0f;
         return where[i * dim + j];
     }
 
@@ -26,9 +27,13 @@ struct MatrixView {
         return where[i * dim + j];
     }
 
-    // create a subview starting at (row_offset, col_offset)
-    MatrixView subview(size_t row_offset, size_t col_offset) const {
-        return MatrixView{where + row_offset * dim + col_offset, dim};
+    // create a subview starting at (i, j)
+    MatrixView subview(size_t i, size_t j, size_t range) const {
+        return MatrixView{where + i * dim + j, dim, std::min(rangeI - i, range), std::min(rangeJ - j, range)};
+    }
+
+    static MatrixView makeview(float* where, size_t dim) {
+        return MatrixView{where, dim, dim, dim};
     }
 
     // kinda like `MatrixView += other`
@@ -74,6 +79,24 @@ void sub(const MatrixView A, const MatrixView B, MatrixView C, size_t n) {
             C(i, j) = A(i, j) - B(i, j);
 }
 
+// add() with bounds checking for C
+void addSafe(const MatrixView A, const MatrixView B, MatrixView C, size_t n) {
+    size_t rangeI = std::min(C.rangeI, n);
+    size_t rangeJ = std::min(C.rangeJ, n);
+    for (size_t i = 0; i < rangeI; ++i)
+        for (size_t j = 0; j < rangeJ; ++j)
+            C(i, j) = A(i, j) + B(i, j);
+}
+
+// sub() with bounds checking for C
+void subSafe(const MatrixView A, const MatrixView B, MatrixView C, size_t n) {
+    size_t rangeI = std::min(C.rangeI, n);
+    size_t rangeJ = std::min(C.rangeJ, n);
+    for (size_t i = 0; i < rangeI; ++i)
+        for (size_t j = 0; j < rangeJ; ++j)
+            C(i, j) = A(i, j) - B(i, j);
+}
+
 // C += A @ B. C must not overlap with A or B
 void improved_matmul(const MatrixView A, const MatrixView B, MatrixView C, size_t n) {
     alignas(64) static float C_loc[block_sz][block_sz];
@@ -107,73 +130,53 @@ void strassen_matmul(const MatrixView A, const MatrixView B, MatrixView C, size_
         return;
     }
 
-    if (n % 2 != 0) {
-        size_t n1 = n + 1;
-        float* memory_block = new float[3 * n1 * n1]{};
-        MatrixView A_pad{memory_block, n1};
-        MatrixView B_pad{memory_block + n1 * n1, n1};
-        MatrixView C_pad{memory_block + 2 * n1 * n1, n1};
-
-        for (size_t i = 0; i < n; ++i) {
-            std::copy(&A(i, 0), &A(i, n), &A_pad(i, 0));
-            std::copy(&B(i, 0), &B(i, n), &B_pad(i, 0));
-        }
-
-        strassen_matmul(A_pad, B_pad, C_pad, n1);
-        for (size_t i = 0; i < n; ++i) {
-            std::copy(&C_pad(i, 0), &C_pad(i, n), &C(i, 0));
-        }
-
-        delete[] memory_block;
-        return;
-    }
-
-    size_t half_n = n / 2;
-    auto A11 = A.subview(0, 0);
-    auto A12 = A.subview(0, half_n);
-    auto A21 = A.subview(half_n, 0);
-    auto A22 = A.subview(half_n, half_n);
-    auto B11 = B.subview(0, 0);
-    auto B12 = B.subview(0, half_n);
-    auto B21 = B.subview(half_n, 0);
-    auto B22 = B.subview(half_n, half_n);
-    auto C11 = C.subview(0, 0);
-    auto C12 = C.subview(0, half_n);
-    auto C21 = C.subview(half_n, 0);
-    auto C22 = C.subview(half_n, half_n);
+    size_t half_n = (n + 1) / 2;
+    auto A11 = A.subview(0, 0, half_n);
+    auto A12 = A.subview(0, half_n, half_n);
+    auto A21 = A.subview(half_n, 0, half_n);
+    auto A22 = A.subview(half_n, half_n, half_n);
+    auto B11 = B.subview(0, 0, half_n);
+    auto B12 = B.subview(0, half_n, half_n);
+    auto B21 = B.subview(half_n, 0, half_n);
+    auto B22 = B.subview(half_n, half_n, half_n);
+    auto C11 = C.subview(0, 0, half_n);
+    auto C12 = C.subview(0, half_n, half_n);
+    auto C21 = C.subview(half_n, 0, half_n);
+    auto C22 = C.subview(half_n, half_n, half_n);
 
     size_t half_n_sq = half_n * half_n;
-    float* memory_block = new float[2 * half_n_sq]{};
-    MatrixView X{memory_block, half_n};
-    MatrixView Y{memory_block + half_n_sq, half_n};
+    std::vector<float> memory_block(5 * half_n_sq, 0.0f);
+    auto X = MatrixView::makeview(&memory_block[0], half_n);
+    auto Y = MatrixView::makeview(&memory_block[half_n_sq], half_n);
+    auto U1 = MatrixView::makeview(&memory_block[2 * half_n_sq], half_n);
+    auto U2 = MatrixView::makeview(&memory_block[3 * half_n_sq], half_n);
+    auto U3 = MatrixView::makeview(&memory_block[4 * half_n_sq], half_n);
 
     sub(A11, A21, X, half_n);
     sub(B22, B12, Y, half_n);
-    strassen_matmul(X, Y, C21, half_n);
+    strassen_matmul(X, Y, U1, half_n);
     add(A21, A22, X, half_n);
     sub(B12, B11, Y, half_n);
-    strassen_matmul(X, Y, C22, half_n);
+    strassen_matmul(X, Y, U2, half_n);
     X.sub(A11, half_n);
     sub(B22, Y, Y, half_n);
-    strassen_matmul(X, Y, C12, half_n);
+    strassen_matmul(X, Y, U3, half_n);
     sub(A12, X, X, half_n);
     strassen_matmul(X, B22, C11, half_n);
     std::fill_n(&X.where[0], half_n_sq, 0.0f);
     strassen_matmul(A11, B11, X, half_n);
-    C12.add(X, half_n);
-    C21.add(C12, half_n);
-    C12.add(C22, half_n);
-    C22.add(C21, half_n);
-    C12.add(C11, half_n);
+    U3.add(X, half_n);
+    U1.add(U3, half_n);
+    U3.add(U2, half_n);
+    addSafe(U2, U1, C22, half_n);
+    addSafe(U3, C11, C12, half_n);
     Y.sub(B21, half_n);
     C11.clear(half_n);
     strassen_matmul(A22, Y, C11, half_n);
-    C21.sub(C11, half_n);
+    subSafe(U1, C11, C21, half_n);
     C11.clear(half_n);
     strassen_matmul(A12, B21, C11, half_n);
     C11.add(X, half_n);
-
-    delete[] memory_block;
 }
 
 float maxdiff(const MatrixView C1, const MatrixView C2, size_t n) {
@@ -203,21 +206,16 @@ int main(int argc, char** argv) {
     }
 
     size_t size = std::stoul(argv[1]);
-    // std::println("Matrix size: {}x{}", size, size);
-    // std::println("Threshold: {}", threshold);
-    // std::println("Block size: {}", block_sz);
+    std::println("Matrix size: {}x{}", size, size);
+    std::println("Threshold: {}", threshold);
+    std::println("Block size: {}", block_sz);
 
-    float *A_in = new float[size * size];
-    float *B_in = new float[size * size];
-    float *C1 = new float[size * size]{};
-    // float *C2 = new float[size * size]{};
+    std::vector<float> memory_block(4 * size * size, 0.0f);
+    MatrixView A = MatrixView::makeview(&memory_block[0], size);
+    MatrixView B = MatrixView::makeview(&memory_block[size * size], size);
+    MatrixView C_naive = MatrixView::makeview(&memory_block[2 * size * size], size);
+    MatrixView C_improved = MatrixView::makeview(&memory_block[3 * size * size], size);
 
-    MatrixView A{A_in, size};
-    MatrixView B{B_in, size};
-    MatrixView C_naive{C1, size};
-    // MatrixView C_improved{C2, size};
-
-    // Allocate and fill matrices (inline; uniform [-1,1] random)
     std::random_device rd;
     std::mt19937 gen(rd());
     std::uniform_real_distribution<float> dis(-1.0f, 1.0f);
@@ -232,15 +230,15 @@ int main(int argc, char** argv) {
     improved_matmul(A, B, C_naive, size);
     auto end = std::chrono::high_resolution_clock::now();
     auto t1 = std::chrono::duration<double, std::milli>(end - start);
-    std::println("{}x{}: {}", size, size, t1);
+    std::println("Improved: {}", t1);
 
-    // start = std::chrono::high_resolution_clock::now();
-    // strassen_matmul(A, B, C_improved, size);
-    // end = std::chrono::high_resolution_clock::now();
-    // auto t2 = std::chrono::duration<double, std::milli>(end - start);
-    // std::println("Strassen: {}", t2);
-    // std::println("Speedup: {:.2f}x", t1.count() / t2.count());
-    // std::println("Max difference: {:.5f}", maxdiff(C_naive, C_improved, size));
+    start = std::chrono::high_resolution_clock::now();
+    strassen_matmul(A, B, C_improved, size);
+    end = std::chrono::high_resolution_clock::now();
+    auto t2 = std::chrono::duration<double, std::milli>(end - start);
+    std::println("Strassen: {}", t2);
+    std::println("Speedup: {:.2f}x", t1.count() / t2.count());
+    std::println("Max difference: {:.5f}", maxdiff(C_naive, C_improved, size));
 
     return 0;
 }
