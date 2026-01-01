@@ -34,7 +34,7 @@ The project explores the transition from a naive $O(n^3)$ approach to a sub-cubi
 
 ## 🛠️ Prerequisites
 
-* **C++ Compiler:** GCC recommended (requires C++17 or later).
+* **C++ Compiler:** GCC recommended (requires C++20 or later).
 * **OpenMP:** Usually included with GCC (`libgomp`).
 * **MPI:** OpenMPI or MPICH implementation.
 
