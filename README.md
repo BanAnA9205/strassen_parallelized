@@ -5,6 +5,7 @@ This repository contains high-performance C++ implementations of **Strassen’s 
 The project explores the transition from a naive $O(n^3)$ approach to a sub-cubic $O(n^{2.81})$ Strassen-Winograd implementation, culminating in a Hybrid MPI+OpenMP solution capable of running on computer clusters.
 
 **Authors:** Nguyen Van An, Le Huu Trieu
+
 **Course:** CO3067 - Parallel Computing (HCMUT)
 
 ## 🚀 Features
