@@ -108,7 +108,7 @@ Standard Strassen implementations suffer from memory explosion due to temporary 
 ### Distributed-Memory Performance
 
 | Size (N) | Strassen MPI (ms) | Strassen Hybrid (ms) |
-| :--- | :--- | :--- | :--- |
+| :--- | :--- | :--- |
 | **2,000** | 1956.90 | 911.14 |
 | **4,000** | 11193.70 | 3878.87 |
 | **6,000** | 35789.20 | 10380.90 |
