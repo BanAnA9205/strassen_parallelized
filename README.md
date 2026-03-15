@@ -95,13 +95,25 @@ Standard Strassen implementations suffer from memory explosion due to temporary 
 
 ## 📈 Performance
 
-*Benchmarks conducted on Intel Core i5 / AMD Ryzen 5 & HCMUT HPC Cluster.*
+### Shared-Memory Performance
 
 | Size (N) | Naive (ms) | Improved (ms) | Strassen Serial (ms) | Strassen OMP (ms) |
 | :--- | :--- | :--- | :--- | :--- |
-| 2,000 | 6,744 | 342 | 354 | **108** |
-| 4,000 | 136,691 | 2,880 | 2,492 | **831** |
-| 8,000 | TLE | 21,924 | 16,717 | **4,976** |
+| **2,000** | 6744.61 | 342.97 | 354.29 | 108.52 |
+| **4,000** | 136691.00 | 2880.57 | 2492.40 | 831.70 |
+| **6,000** | 552019.00 | 10092.24 | 7720.80 | 2301.73 |
+| **8,000** | TLE | 21924.07 | 16717.17 | 4976.20 |
+| **10,000** | TLE | 43913.83 | 32277.63 | 9914.28 |
+
+### Distributed-Memory Performance
+
+| Size (N) | Strassen MPI (ms) | Strassen Hybrid (ms) |
+| :--- | :--- | :--- | :--- |
+| **2,000** | 1956.90 | 911.14 |
+| **4,000** | 11193.70 | 3878.87 |
+| **6,000** | 35789.20 | 10380.90 |
+| **8,000** | 77665.80 | 21872.30 |
+| **10,000** | 52110.20 | 19652.00 |
 
 *Note: While significantly faster than naive approaches, this implementation is generally slower than highly-tuned libraries like OpenBLAS, which utilize assembly-level optimizations.*
 
